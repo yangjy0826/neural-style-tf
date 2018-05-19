@@ -497,7 +497,9 @@ def postprocess(img):
   img += np.array([123.68, 116.779, 103.939]).reshape((1,1,1,3))
   # shape (1, h, w, d) to (h, w, d)
   img = img[0]
-  img = np.clip(img, 0, 255).astype('uint8')
+  img = np.clip(img, 0, 255).astype('uint8') #numpy.clip(a, a_min, a_max, out=None)
+  #其中a是一个数组，后面两个参数分别表示最小和最大值，将数组中的元素限制在a_min, a_max之间，
+  #大于a_max的就使得它等于 a_max，小于a_min,的就使得它等于a_min。
   # rgb to bgr
   img = img[...,::-1]
   return img
@@ -525,9 +527,9 @@ def read_weights_file(path):
   for i in range(1, len(lines)):
     line = lines[i].rstrip().split(' ')
     vals[i-1] = np.array(list(map(np.float32, line)))
-    vals[i-1] = list(map(lambda x: 0. if x < 255. else 1., vals[i-1]))
+    vals[i-1] = list(map(lambda x: 0. if x < 255. else 1., vals[i-1])) # 使用 lambda 匿名函数 ###
   # expand to 3 channels
-  weights = np.dstack([vals.astype(np.float32)] * 3)
+  weights = np.dstack([vals.astype(np.float32)] * 3) #Stack arrays in sequence depth wise (along third dimension).
   return weights
 
 def normalize(weights):
@@ -553,7 +555,7 @@ def stylize(content_img, style_imgs, init_img, frame=None):
     net = build_model(content_img)
     
     # style loss
-    if args.style_mask:
+    if args.style_mask: #style_mask:Boolean flag indicating if style is transferred to masked regions
       L_style = sum_masked_style_losses(sess, net, style_imgs)
     else:
       L_style = sum_style_losses(sess, net, style_imgs)
