@@ -5,7 +5,7 @@ import argparse
 import struct
 import errno
 import time                       
-import cv2
+import cv2  #openCV
 import os
 
 '''
@@ -237,7 +237,7 @@ def build_model(input_img):
   _, h, w, d     = input_img.shape
   
   if args.verbose: print('loading model weights...')
-  vgg_rawnet     = scipy.io.loadmat(args.model_weights)
+  vgg_rawnet     = scipy.io.loadmat(args.model_weights) #读取mat数据
   vgg_layers     = vgg_rawnet['layers'][0]
   if args.verbose: print('constructing layers...')
   net['input']   = tf.Variable(np.zeros((1, h, w, d), dtype=np.float32))
@@ -308,7 +308,8 @@ def build_model(input_img):
   return net
 
 def conv_layer(layer_name, layer_input, W):
-  conv = tf.nn.conv2d(layer_input, W, strides=[1, 1, 1, 1], padding='SAME')
+  conv = tf.nn.conv2d(layer_input, W, strides=[1, 1, 1, 1], padding='SAME') 
+  #tf.nn.conv2d(input, filter, strides, padding, use_cudnn_on_gpu=None, name=None)
   if args.verbose: print('--{} | shape={} | weights_shape={}'.format(layer_name, 
     conv.get_shape(), W.get_shape()))
   return conv
@@ -348,13 +349,13 @@ def content_layer_loss(p, x):
   _, h, w, d = p.get_shape()
   M = h.value * w.value
   N = d.value
-  if args.content_loss_function   == 1:
+  if args.content_loss_function   == 1: #Different constants K in the content loss function
     K = 1. / (2. * N**0.5 * M**0.5)
   elif args.content_loss_function == 2:
     K = 1. / (N * M)
   elif args.content_loss_function == 3:  
     K = 1. / 2.
-  loss = K * tf.reduce_sum(tf.pow((x - p), 2))
+  loss = K * tf.reduce_sum(tf.pow((x - p), 2)) #压缩求和，用于降维
   return loss
 
 def style_layer_loss(a, x):
@@ -378,7 +379,7 @@ def mask_style_layer(a, x, mask_img):
   tensors = []
   for _ in range(d.value): 
     tensors.append(mask)
-  mask = tf.stack(tensors, axis=2)
+  mask = tf.stack(tensors, axis=2)  #tf.stack：矩阵拼接
   mask = tf.stack(mask, axis=0)
   mask = tf.expand_dims(mask, 0)
   a = tf.multiply(a, mask)
@@ -390,6 +391,7 @@ def sum_masked_style_losses(sess, net, style_imgs):
   weights = args.style_imgs_weights
   masks = args.style_mask_imgs
   for img, img_weight, img_mask in zip(style_imgs, weights, masks):
+    #zip() 函数用于将可迭代的对象作为参数，将对象中对应的元素打包成一个个元组，然后返回由这些元组组成的列表。
     sess.run(net['input'].assign(img))
     style_loss = 0.
     for layer, weight in zip(args.style_layers, args.style_layer_weights):
@@ -484,10 +486,11 @@ def write_image(path, img):
 
 def preprocess(img):
   # bgr to rgb
-  img = img[...,::-1]
+  img = img[...,::-1] ###
   # shape (h, w, d) to (1, h, w, d)
   img = img[np.newaxis,:,:,:]
-  img -= np.array([123.68, 116.779, 103.939]).reshape((1,1,1,3))
+  img -= np.array([123.68, 116.779, 103.939]).reshape((1,1,1,3)) 
+  #减去的均值是数据集所有图片的RGB三个通道的均值构成的向量[Rmean, Gmean, Bmean]
   return img
 
 def postprocess(img):
@@ -709,7 +712,7 @@ def get_content_image(content_img):
   # resize if > max size
   if h > w and h > mx:
     w = (float(mx) / float(h)) * w
-    img = cv2.resize(img, dsize=(int(w), mx), interpolation=cv2.INTER_AREA)
+    img = cv2.resize(img, dsize=(int(w), mx), interpolation=cv2.INTER_AREA) #INTER_AREA：使用像素区域关系进行重采样
   if w > mx:
     h = (float(mx) / float(w)) * h
     img = cv2.resize(img, dsize=(mx, int(h)), interpolation=cv2.INTER_AREA)
